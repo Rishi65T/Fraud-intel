@@ -1,0 +1,6 @@
+{
+  "name": "FraudIntel - AI Fraud Pattern Discovery & Investigation Platform",
+  "description": "Enterprise AI-powered financial crime intelligence command center featuring real-time 3D fraud graph networks, ML risk scoring, SHAP explainability, and multi-entity investigation workflows.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
