@@ -17,29 +17,29 @@ export const KpiRow: React.FC<KpiRowProps> = ({ kpis }) => {
   const cards = [
     {
       label: 'Total Transactions',
-      value: '12.4M',
-      change: '↑ 12%',
+      value: kpis?.totalTransactions || '5,000',
+      change: kpis?.totalTransactionsChange || '↑ 14%',
       valueColor: 'text-[#38BDF8]',
       trendColor: 'text-[#38BDF8]'
     },
     {
       label: 'Risk Transactions',
-      value: '48,231',
-      change: '↑ 28%',
+      value: kpis?.riskTransactions || '240',
+      change: kpis?.riskTransactionsChange || '↑ 22%',
       valueColor: 'text-[#EF4444]',
       trendColor: 'text-[#34D399]'
     },
     {
       label: 'Active Alerts',
-      value: '1,284',
-      change: '↑ 5%',
+      value: kpis?.activeAlerts || '30',
+      change: kpis?.activeAlertsChange || '↑ 8%',
       valueColor: 'text-[#F87171]',
       trendColor: 'text-[#34D399]'
     },
     {
       label: 'Fraud Clusters',
-      value: '37',
-      change: '↑ 18%',
+      value: kpis?.fraudClusters || '16',
+      change: kpis?.fraudClustersChange || '↑ 12%',
       valueColor: 'text-[#F87171]',
       trendColor: 'text-[#34D399]'
     }

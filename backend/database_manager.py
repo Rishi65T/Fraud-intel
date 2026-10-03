@@ -160,7 +160,13 @@ class DatabaseManager:
         # Attempt Redis connection
         if HAS_REDIS:
             try:
-                self.redis_client = redis.Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, socket_timeout=1)
+                self.redis_client = redis.Redis(
+                    host=settings.REDIS_HOST, 
+                    port=settings.REDIS_PORT, 
+                    socket_connect_timeout=0.2, 
+                    socket_timeout=0.2,
+                    retry_on_timeout=False
+                )
                 self.redis_client.ping()
                 print("DatabaseManager: Connected to Redis Streams!")
             except Exception:

@@ -1,9 +1,21 @@
-import React, { useState } from 'react';
-import { X, ExternalLink, ShieldAlert, ArrowUpRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, ArrowUpRight, RefreshCw } from 'lucide-react';
 
 interface LiveTransactionStreamProps {
   onSelectEntity?: (id: string) => void;
   onOpenProfile?: () => void;
+}
+
+interface FormattedTxn {
+  id: string;
+  account: string;
+  amount: string;
+  merchant: string;
+  location: string;
+  risk: string;
+  status: string;
+  riskColor: string;
+  badgeBg: string;
 }
 
 export const LiveTransactionStream: React.FC<LiveTransactionStreamProps> = ({
@@ -12,19 +24,78 @@ export const LiveTransactionStream: React.FC<LiveTransactionStreamProps> = ({
 }) => {
   const [isMinimized, setIsMinimized] = useState(false);
   const [selectedTxn, setSelectedTxn] = useState<string | null>(null);
+  const [transactions, setTransactions] = useState<FormattedTxn[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [lastUpdated, setLastUpdated] = useState<string>('');
 
-  const transactions = [
-    { id: 'TXN-784923', account: 'ACC-78291', amount: '$2,450.00', merchant: 'Amazon', location: 'New York', risk: '0.92', status: 'FRAUD', riskColor: 'text-[#EF4444]', badgeBg: 'bg-rose-500/20 text-[#EF4444] border-rose-500/30' },
-    { id: 'TXN-784922', account: 'ACC-11832', amount: '$320.00', merchant: 'Walmart', location: 'Chicago', risk: '0.23', status: 'CLEAN', riskColor: 'text-[#38BDF8]', badgeBg: 'bg-emerald-500/20 text-[#10B981] border-emerald-500/30' },
-    { id: 'TXN-784921', account: 'ACC-99213', amount: '$1,200.00', merchant: 'Apple', location: 'San Francisco', risk: '0.78', status: 'REVIEW', riskColor: 'text-[#F59E0B]', badgeBg: 'bg-amber-500/20 text-[#F59E0B] border-amber-500/30' },
-    { id: 'TXN-784920', account: 'ACC-44721', amount: '$89.00', merchant: 'Netflix', location: 'Miami', risk: '0.12', status: 'CLEAN', riskColor: 'text-[#38BDF8]', badgeBg: 'bg-emerald-500/20 text-[#10B981] border-emerald-500/30' },
-    { id: 'TXN-784919', account: 'ACC-78291', amount: '$3,600.00', merchant: 'CryptoEx', location: 'Unknown', risk: '0.96', status: 'FRAUD', riskColor: 'text-[#EF4444]', badgeBg: 'bg-rose-500/20 text-[#EF4444] border-rose-500/30' }
-  ];
+  const fetchLiveTransactions = async () => {
+    try {
+      const res = await fetch('/api/transactions?limit=8');
+      if (res.ok) {
+        const rawData = await res.json();
+        if (Array.isArray(rawData) && rawData.length > 0) {
+          const mapped: FormattedTxn[] = rawData.map((t: any) => {
+            const score = typeof t.predicted_risk_score === 'number' 
+              ? t.predicted_risk_score 
+              : (typeof t.risk === 'number' ? t.risk : 0.05);
+            
+            const isFraud = score >= 0.70 || t.is_fraud === 1;
+            const isReview = !isFraud && score >= 0.40;
+            const statusStr = isFraud ? 'FRAUD' : isReview ? 'REVIEW' : 'CLEAN';
 
-  const handleRowClick = (t: typeof transactions[0]) => {
+            const riskColor = isFraud 
+              ? 'text-[#EF4444]' 
+              : isReview 
+                ? 'text-[#F59E0B]' 
+                : 'text-[#38BDF8]';
+
+            const badgeBg = isFraud
+              ? 'bg-rose-500/20 text-[#EF4444] border-rose-500/30'
+              : isReview
+                ? 'bg-amber-500/20 text-[#F59E0B] border-amber-500/30'
+                : 'bg-emerald-500/20 text-[#10B981] border-emerald-500/30';
+
+            const formattedAmount = typeof t.amount === 'number'
+              ? `₹${t.amount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
+              : (t.amount || '₹0.00');
+
+            return {
+              id: t.transaction_id || t.id || 'TXN-UNKNOWN',
+              account: t.account_id || t.customer_id || t.account || 'ACC-DEFAULT',
+              amount: formattedAmount,
+              merchant: t.merchant_name || t.merchant || 'Retail Gateway',
+              location: t.location_city || t.location || 'India',
+              risk: score.toFixed(2),
+              status: statusStr,
+              riskColor,
+              badgeBg
+            };
+          });
+          setTransactions(mapped);
+          setLastUpdated(new Date().toLocaleTimeString());
+          setLoading(false);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn("Live stream fetch notice:", err);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchLiveTransactions();
+    const interval = setInterval(fetchLiveTransactions, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleRowClick = (t: FormattedTxn) => {
     setSelectedTxn(t.id);
     if (onSelectEntity) {
       onSelectEntity(t.account);
+    }
+    if (onOpenProfile) {
+      onOpenProfile();
     }
   };
 
@@ -52,17 +123,32 @@ export const LiveTransactionStream: React.FC<LiveTransactionStreamProps> = ({
             Live Transaction Stream
           </span>
           <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-            REALTIME
+            DATABASE ACTIVE
           </span>
+          {lastUpdated && (
+            <span className="text-[10px] text-slate-500 font-mono hidden sm:inline">
+              Updated {lastUpdated}
+            </span>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={() => setIsMinimized(true)}
-          className="text-slate-500 hover:text-white transition-colors"
-          title="Minimize Stream"
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={fetchLiveTransactions}
+            className="text-slate-400 hover:text-white transition-colors"
+            title="Refresh database stream"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-[#38BDF8]' : ''}`} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsMinimized(true)}
+            className="text-slate-500 hover:text-white transition-colors"
+            title="Minimize Stream"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* Table */}

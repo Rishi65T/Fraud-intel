@@ -16,16 +16,22 @@ class LocalEmbedder:
     def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
         self.model_name = model_name
         self.model = None
-        if HAS_SENTENCE_TRANSFORMERS:
-            try:
-                print(f"Loading local embedding model: {model_name}...")
-                self.model = SentenceTransformer(model_name)
-                print("Local embedding model loaded successfully!")
-            except Exception as e:
-                print(f"SentenceTransformer fallback: {e}")
-                self.model = None
+        self._load_attempted = False
+
+    def _ensure_model(self):
+        if not self._load_attempted:
+            self._load_attempted = True
+            if HAS_SENTENCE_TRANSFORMERS:
+                try:
+                    print(f"Loading local embedding model: {self.model_name}...")
+                    self.model = SentenceTransformer(self.model_name)
+                    print("Local embedding model loaded successfully!")
+                except Exception as e:
+                    print(f"SentenceTransformer fallback: {e}")
+                    self.model = None
 
     def encode(self, texts: list) -> np.ndarray:
+        self._ensure_model()
         if self.model is not None:
             try:
                 embeddings = self.model.encode(texts, convert_to_numpy=True)

@@ -40,7 +40,7 @@ app.add_middleware(
 risk_engine = RealTimeRiskEngine()
 graph_engine = HeterogeneousFraudGraph()
 rag_copilot = LocalFraudCopilot()
-vector_search = LocalVectorSearch()
+vector_search = rag_copilot.searcher
 drift_monitor = DriftMonitor()
 
 streaming_active = False

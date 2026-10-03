@@ -1,8 +1,16 @@
-import React, { useState } from 'react';
-import { X, Network, ArrowUpRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Network, ArrowUpRight, RefreshCw } from 'lucide-react';
 
 interface TopFraudClustersProps {
   onSelectCluster?: (clusterId: string) => void;
+}
+
+interface FormattedCluster {
+  id: string;
+  name: string;
+  entities: number;
+  score: number;
+  isCrit: boolean;
 }
 
 export const TopFraudClusters: React.FC<TopFraudClustersProps> = ({
@@ -10,16 +18,43 @@ export const TopFraudClusters: React.FC<TopFraudClustersProps> = ({
 }) => {
   const [isMinimized, setIsMinimized] = useState(false);
   const [activeCluster, setActiveCluster] = useState<string | null>(null);
+  const [clusters, setClusters] = useState<FormattedCluster[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  const clusters = [
-    { id: 'CL-001', entities: 48, score: 0.92, isCrit: true },
-    { id: 'CL-002', entities: 32, score: 0.87, isCrit: true },
-    { id: 'CL-003', entities: 28, score: 0.79, isCrit: false },
-    { id: 'CL-004', entities: 21, score: 0.74, isCrit: false },
-    { id: 'CL-005', entities: 19, score: 0.68, isCrit: false }
-  ];
+  const fetchClusters = async () => {
+    try {
+      const res = await fetch('/api/clusters');
+      if (res.ok) {
+        const rawData = await res.json();
+        if (Array.isArray(rawData) && rawData.length > 0) {
+          const mapped: FormattedCluster[] = rawData.slice(0, 5).map((c: any, idx: number) => {
+            const score = typeof c.risk_score === 'number' 
+              ? c.risk_score 
+              : (typeof c.score === 'number' ? c.score : 0.85);
+            return {
+              id: c.cluster_id || c.id || `CL-00${idx + 1}`,
+              name: c.name || `Syndicate Cluster ${idx + 1}`,
+              entities: c.member_count || c.entities || (c.members ? c.members.length : 24),
+              score: Math.min(score, 0.99),
+              isCrit: score >= 0.85
+            };
+          });
+          setClusters(mapped);
+          setLoading(false);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch live clusters:", err);
+    }
+    setLoading(false);
+  };
 
-  const handleClusterClick = (c: typeof clusters[0]) => {
+  useEffect(() => {
+    fetchClusters();
+  }, []);
+
+  const handleClusterClick = (c: FormattedCluster) => {
     setActiveCluster(c.id);
     if (onSelectCluster) {
       onSelectCluster(c.id);
@@ -49,15 +84,28 @@ export const TopFraudClusters: React.FC<TopFraudClustersProps> = ({
           <span className="text-xs font-bold text-white tracking-wide">
             Top Fraud Clusters
           </span>
+          <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+            GRAPH LOUVAIN
+          </span>
         </div>
-        <button
-          type="button"
-          onClick={() => setIsMinimized(true)}
-          className="text-slate-500 hover:text-white transition-colors"
-          title="Minimize Clusters"
-        >
-          <X className="w-3 h-3" />
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={fetchClusters}
+            className="text-slate-400 hover:text-white transition-colors"
+            title="Refresh clusters"
+          >
+            <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin text-[#38BDF8]' : ''}`} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsMinimized(true)}
+            className="text-slate-500 hover:text-white transition-colors"
+            title="Minimize Clusters"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
       </div>
 
       {/* Table matching screenshot */}

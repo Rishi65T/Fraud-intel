@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar, NavView } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { KpiRow } from './components/analytics/KpiRow';
@@ -12,6 +12,13 @@ import { EntityProfileModal } from './components/modals/EntityProfileModal';
 import { UserProfileModal } from './components/modals/UserProfileModal';
 import { LoginScreen } from './components/auth/LoginScreen';
 import { AnalystUser, DEMO_ANALYSTS } from './types/auth';
+import { 
+  RiskAlert, 
+  InvestigationCase, 
+  FraudCluster, 
+  FraudEntity 
+} from './types/fraud';
+import { fraudApi } from './services/api';
 
 // Dedicated Full Views
 import { ClustersView } from './components/views/ClustersView';
@@ -43,13 +50,51 @@ export default function App() {
   const [isLocked, setIsLocked] = useState<boolean>(false);
   const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState<boolean>(false);
 
+  // Live Database State
+  const [kpiData, setKpiData] = useState<any>(null);
+  const [liveAlerts, setLiveAlerts] = useState<RiskAlert[]>(INITIAL_ALERTS);
+  const [liveInvestigations, setLiveInvestigations] = useState<InvestigationCase[]>(INITIAL_INVESTIGATIONS);
+  const [liveClusters, setLiveClusters] = useState<FraudCluster[]>(FRAUD_CLUSTERS);
+  const [liveEntities, setLiveEntities] = useState<Record<string, FraudEntity>>(INITIAL_ENTITIES);
+
+  // Fetch real telemetry from SQLite / Backend database on mount
+  useEffect(() => {
+    const fetchTelemetry = async () => {
+      try {
+        const analytics = await fraudApi.getAnalytics();
+        if (analytics && analytics.kpis) {
+          setKpiData(analytics.kpis);
+        }
+        const alerts = await fraudApi.getAlerts();
+        if (alerts && alerts.length > 0) {
+          setLiveAlerts(alerts);
+        }
+        const clusters = await fraudApi.getClusters();
+        if (clusters && clusters.length > 0) {
+          setLiveClusters(clusters);
+        }
+        const investigations = await fraudApi.getInvestigations();
+        if (investigations && investigations.length > 0) {
+          setLiveInvestigations(investigations);
+        }
+        const entities = await fraudApi.getEntities();
+        if (entities && Object.keys(entities).length > 0) {
+          setLiveEntities(entities);
+        }
+      } catch (err) {
+        console.warn("Backend database telemetry load note:", err);
+      }
+    };
+    fetchTelemetry();
+  }, []);
+
   // Default to 'graph' or 'overview'
   const [activeView, setActiveView] = useState<NavView>('graph');
   const [selectedEntityId, setSelectedEntityId] = useState<string>('ACC-78291');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
   const [showLiveStream, setShowLiveStream] = useState<boolean>(true);
 
-  const selectedEntity = INITIAL_ENTITIES[selectedEntityId] || INITIAL_ENTITIES['ACC-78291'];
+  const selectedEntity = liveEntities[selectedEntityId] || liveEntities['ACC-78291'] || INITIAL_ENTITIES['ACC-78291'];
 
   const handleSelectEntity = (id: string) => {
     setSelectedEntityId(id);
@@ -208,15 +253,15 @@ export default function App() {
 
               {/* Row 1: 4 Top KPI Cards */}
               <KpiRow
-                kpis={{
-                  totalTransactions: '12.4M',
-                  totalTransactionsChange: '↑ 12%',
-                  riskTransactions: '48,231',
-                  riskTransactionsChange: '↑ 28%',
-                  activeAlerts: '1,284',
-                  activeAlertsChange: '↑ 5%',
-                  fraudClusters: '37',
-                  fraudClustersChange: '↑ 18%'
+                kpis={kpiData || {
+                  totalTransactions: '5,000',
+                  totalTransactionsChange: '↑ 14%',
+                  riskTransactions: '240',
+                  riskTransactionsChange: '↑ 22%',
+                  activeAlerts: `${liveAlerts.length}`,
+                  activeAlertsChange: '↑ 8%',
+                  fraudClusters: `${liveClusters.length}`,
+                  fraudClustersChange: '↑ 12%'
                 }}
               />
 
@@ -290,7 +335,7 @@ export default function App() {
           {activeView === 'investigate' && (
             <div className="animate-in fade-in">
               <InvestigationWorkspaceView
-                cases={INITIAL_INVESTIGATIONS}
+                cases={liveInvestigations}
                 onSelectEntity={(id) => {
                   setSelectedEntityId(id);
                   setIsProfileModalOpen(true);
@@ -304,7 +349,7 @@ export default function App() {
           {activeView === 'alerts' && (
             <div className="animate-in fade-in">
               <RiskAlertsView
-                alerts={INITIAL_ALERTS}
+                alerts={liveAlerts}
                 onSelectEntity={(id) => setSelectedEntityId(id)}
                 onResolveAlert={() => {}}
                 onAssignAlert={() => {}}
@@ -315,7 +360,7 @@ export default function App() {
           {activeView === 'entities' && (
             <div className="animate-in fade-in">
               <EntitiesView
-                entities={INITIAL_ENTITIES}
+                entities={liveEntities}
                 onSelectEntity={(id) => setSelectedEntityId(id)}
                 onOpenFullProfile={() => setIsProfileModalOpen(true)}
               />
@@ -325,7 +370,7 @@ export default function App() {
           {activeView === 'clusters' && (
             <div className="animate-in fade-in">
               <ClustersView
-                clusters={FRAUD_CLUSTERS}
+                clusters={liveClusters}
                 onSelectCluster={() => setSelectedEntityId('ACC-78291')}
                 onInspectInGraph={() => setActiveView('graph')}
               />
