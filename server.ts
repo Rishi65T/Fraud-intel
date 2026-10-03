@@ -24,7 +24,8 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL || 'http://127.0.0.1:8000';
+const PYTHON_BACKEND_PORT = parseInt(process.env.PYTHON_BACKEND_PORT || '8001', 10);
+const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL || `http://127.0.0.1:${PYTHON_BACKEND_PORT}`;
 
 app.use(express.json());
 
@@ -33,12 +34,12 @@ const proxyToFastAPI = (req: Request, res: Response, targetPath?: string) => {
   const pathUrl = targetPath || req.originalUrl;
   const options = {
     hostname: '127.0.0.1',
-    port: 8000,
+    port: PYTHON_BACKEND_PORT,
     path: pathUrl,
     method: req.method,
     headers: {
       ...req.headers,
-      host: '127.0.0.1:8000'
+      host: `127.0.0.1:${PYTHON_BACKEND_PORT}`
     }
   };
 
@@ -80,7 +81,7 @@ app.use('/api/*', (req: Request, res: Response, next) => {
   // Forward directly to FastAPI Python backend
   const options = {
     hostname: '127.0.0.1',
-    port: 8000,
+    port: PYTHON_BACKEND_PORT,
     path: reqUrl,
     method: req.method,
     headers: { 'Content-Type': 'application/json' }
@@ -94,7 +95,8 @@ app.use('/api/*', (req: Request, res: Response, next) => {
     pRes.pipe(res, { end: true });
   });
 
-  pReq.on('error', () => {
+  pReq.on('error', (err) => {
+    if (res.headersSent) return;
     // Fallback response if python backend process is not attached to port 8000
     if (reqUrl.includes('/predict-risk')) {
       return res.json({
@@ -161,5 +163,5 @@ app.get('*', (req: Request, res: Response) => {
 
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
-  console.log(`Connected to Python FastAPI Backend at http://127.0.0.1:8000`);
+  console.log(`Connected to Python FastAPI Backend at http://127.0.0.1:${PYTHON_BACKEND_PORT}`);
 });

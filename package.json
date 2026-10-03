@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "backend": "python -m uvicorn backend.main:app --port 8000 --reload",
+    "backend": "python -m uvicorn backend.main:app --port 8001 --reload",
     "seed": "python database/seed_data.py",
     "train": "python ml/training/train_baselines.py",
     "start": "node server.ts",
