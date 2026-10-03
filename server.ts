@@ -88,6 +88,9 @@ app.use('/api/*', (req: Request, res: Response, next) => {
 
   const pReq = http.request(options, (pRes) => {
     res.status(pRes.statusCode || 200);
+    Object.keys(pRes.headers).forEach((key) => {
+      if (pRes.headers[key]) res.setHeader(key, pRes.headers[key]!);
+    });
     pRes.pipe(res, { end: true });
   });
 

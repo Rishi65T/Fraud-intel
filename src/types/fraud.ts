@@ -7,7 +7,7 @@ export type EntityType =
   | 'IP Address' 
   | 'Location';
 
-export type RiskLevel = 'All' | 'High' | 'Medium' | 'Low';
+export type RiskLevel = 'All' | 'Critical' | 'High' | 'Medium' | 'Low';
 
 export type TransactionStatus = 'FRAUD' | 'REVIEW' | 'CLEAN';
 
@@ -16,7 +16,7 @@ export interface FraudEntity {
   name: string;
   type: EntityType;
   riskScore: number;
-  riskCategory: 'High' | 'Medium' | 'Low';
+  riskCategory: 'Critical' | 'High' | 'Medium' | 'Low';
   details: {
     accountType?: string;
     customerId?: string;

@@ -104,7 +104,37 @@ export const fraudApi = {
       if (status) params.append('status', status);
       if (search) params.append('search', search);
       const res = await fetch(`/api/transactions?${params.toString()}`);
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const rawData = await res.json();
+        if (Array.isArray(rawData) && rawData.length > 0) {
+          return rawData.map((t: any) => {
+            const score = typeof t.riskScore === 'number' 
+              ? t.riskScore 
+              : (typeof t.predicted_risk_score === 'number' ? t.predicted_risk_score : 0.05);
+            const isFraud = score >= 0.70 || t.is_fraud === 1;
+            const isReview = !isFraud && score >= 0.40;
+            const statusStr = isFraud ? 'FRAUD' : isReview ? 'REVIEW' : 'CLEAN';
+
+            return {
+              id: t.id || t.transaction_id || 'TXN-000',
+              accountId: t.accountId || t.account_id || t.customer_id || 'ACC-101',
+              customerName: t.customerName || t.customer_id || 'Account Holder',
+              amount: typeof t.amount === 'number' ? t.amount : parseFloat(t.amount || 0),
+              merchant: t.merchant || t.merchant_name || 'Retail Gateway',
+              merchantCategory: t.merchantCategory || 'Digital Goods',
+              location: t.location || t.location_city || 'India',
+              coordinates: t.coordinates || [19.0760, 72.8777],
+              riskScore: score,
+              status: statusStr,
+              timestamp: t.timestamp || new Date().toISOString(),
+              timeAgo: t.timeAgo || 'Just now',
+              ipAddress: t.ipAddress || t.ip_address || '192.168.1.1',
+              deviceId: t.deviceId || t.device_id || 'DEV-1001',
+              anomalyReasons: t.anomalyReasons || []
+            };
+          });
+        }
+      }
     } catch {
       // fallback
     }
@@ -160,7 +190,22 @@ export const fraudApi = {
   async getClusters(): Promise<FraudCluster[]> {
     try {
       const res = await fetch('/api/clusters');
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const rawData = await res.json();
+        if (Array.isArray(rawData) && rawData.length > 0) {
+          return rawData.map((c: any, idx: number) => ({
+            id: c.id || c.cluster_id || `CL-${100 + idx}`,
+            name: c.name || `Syndicate Cluster ${idx + 1}`,
+            entitiesCount: c.entitiesCount || c.member_count || (c.members ? c.members.length : 16),
+            totalVolume: c.totalVolume || 1850000,
+            riskScore: typeof c.riskScore === 'number' ? c.riskScore : (c.risk_score || 0.88),
+            pattern: c.pattern || 'Multi-Account Device Sharing',
+            detectedTime: c.detectedTime || 'Active',
+            status: c.status || 'Active',
+            description: c.description || 'Identified by Louvain community detection on device-IP transaction graph'
+          }));
+        }
+      }
     } catch {
       // fallback
     }
@@ -170,7 +215,31 @@ export const fraudApi = {
   async getAlerts(): Promise<RiskAlert[]> {
     try {
       const res = await fetch('/api/alerts');
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const rawData = await res.json();
+        if (Array.isArray(rawData) && rawData.length > 0) {
+          return rawData.map((a: any, idx: number) => {
+            const score = typeof a.riskScore === 'number' 
+              ? a.riskScore 
+              : (typeof a.risk_score === 'number' ? a.risk_score : 0.85);
+            const sev = a.severity || (score >= 0.85 ? 'Critical' : score >= 0.70 ? 'High' : 'Medium');
+
+            return {
+              id: a.id || a.alert_id || `ALT-${idx + 1}`,
+              title: a.title || a.trigger_reason || 'High Risk Transaction Flagged',
+              entityId: a.entityId || a.transaction_id || a.customer_id || 'ACC-78291',
+              entityType: a.entityType || 'Transaction',
+              riskScore: score,
+              severity: sev,
+              timestamp: a.timestamp || a.created_at || new Date().toISOString(),
+              timeAgo: a.timeAgo || 'Recent',
+              description: a.description || a.trigger_reason || 'Automated rule & ML threshold trigger',
+              status: a.status === 'NEW' ? 'Open' : (a.status || 'Open'),
+              assignedAnalyst: a.assignedAnalyst || 'Alex Carter'
+            };
+          });
+        }
+      }
     } catch {
       // fallback
     }
@@ -180,7 +249,29 @@ export const fraudApi = {
   async getInvestigations(): Promise<InvestigationCase[]> {
     try {
       const res = await fetch('/api/investigations');
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const rawData = await res.json();
+        if (Array.isArray(rawData) && rawData.length > 0) {
+          return rawData.map((inv: any) => ({
+            id: inv.id || inv.investigation_id || 'INV-2026-001',
+            title: inv.title || 'Fraud Syndicate Investigation',
+            primaryEntityId: inv.primaryEntityId || inv.alert_id || 'ACC-78291',
+            riskScore: typeof inv.riskScore === 'number' ? inv.riskScore : 0.88,
+            status: inv.status || 'In Review',
+            priority: inv.priority || 'High',
+            assignedAnalyst: inv.assignedAnalyst || inv.analyst_id || 'Alex Carter',
+            createdDate: inv.createdDate || inv.created_at || '2026-10-01',
+            lastUpdated: inv.lastUpdated || inv.updated_at || 'Just now',
+            summary: inv.summary || inv.notes || 'Case created by analyst.',
+            keyFindings: inv.keyFindings || ['Initial case triage opened from 3D Fraud Graph inspection'],
+            evidenceEntities: inv.evidenceEntities || [inv.primaryEntityId || 'ACC-78291'],
+            timeline: inv.timeline || [
+              { time: 'Just now', event: 'Case record synced with SQLite database', user: 'System', type: 'system' }
+            ],
+            notes: inv.notesList || []
+          }));
+        }
+      }
     } catch {
       // fallback
     }
