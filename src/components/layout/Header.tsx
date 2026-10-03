@@ -1,16 +1,25 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Headphones, Check, ShieldAlert, User, Settings, LogOut, ChevronDown } from 'lucide-react';
+import { Search, Bell, Headphones, Check, ShieldAlert, User, Settings, LogOut, ChevronDown, Lock } from 'lucide-react';
+import { AnalystUser } from '../../types/auth';
 
 interface HeaderProps {
+  currentUser?: AnalystUser;
   onSearchSelect?: (query: string) => void;
   onNotificationClick?: () => void;
   onNavigateView?: (view: string) => void;
+  onOpenProfile?: () => void;
+  onLockTerminal?: () => void;
+  onSignOut?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ 
+  currentUser,
   onSearchSelect,
   onNotificationClick,
-  onNavigateView
+  onNavigateView,
+  onOpenProfile,
+  onLockTerminal,
+  onSignOut
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -241,7 +250,7 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
 
-          {/* User Profile: Alex Carter with Dropdown */}
+          {/* User Profile: Dynamic Analyst Profile with Dropdown */}
           <div ref={profileRef} className="relative">
             <button
               type="button"
@@ -250,54 +259,89 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#38BDF8] to-[#EC4899] p-0.5 flex items-center justify-center shrink-0">
                 <img
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80"
-                  alt="Alex Carter"
+                  src={currentUser?.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80"}
+                  alt={currentUser?.name || "Alex Carter"}
                   className="w-full h-full rounded-full object-cover"
                 />
               </div>
               <div className="hidden sm:flex flex-col text-left leading-tight">
                 <div className="flex items-center gap-1">
-                  <span className="text-xs font-semibold text-white">Alex Carter</span>
+                  <span className="text-xs font-semibold text-white">{currentUser?.name || "Alex Carter"}</span>
                   <ChevronDown className="w-3 h-3 text-slate-400" />
                 </div>
-                <span className="text-[10px] text-slate-400">Fraud Analyst</span>
+                <span className="text-[10px] text-slate-400">{currentUser?.role || "Fraud Analyst"}</span>
               </div>
             </button>
 
             {isProfileOpen && (
-              <div className="absolute right-0 mt-2 w-52 bg-[#0A0E18] border border-[#161E2E] rounded-xl shadow-2xl p-2 z-50 text-xs animate-in fade-in">
-                <div className="px-2 py-1.5 border-b border-[#161E2E]">
-                  <p className="font-semibold text-white">Alex Carter</p>
-                  <p className="text-[10px] text-slate-400 font-mono">Tier-3 Clearance</p>
+              <div className="absolute right-0 mt-2 w-56 bg-[#0A0E18] border border-[#161E2E] rounded-xl shadow-2xl p-2 z-50 text-xs animate-in fade-in">
+                {/* Clickable Header card to open full profile */}
+                <div 
+                  onClick={() => {
+                    setIsProfileOpen(false);
+                    if (onOpenProfile) onOpenProfile();
+                  }}
+                  className="px-2.5 py-2 border-b border-[#161E2E] hover:bg-[#121A2C] rounded-lg cursor-pointer transition-colors"
+                >
+                  <p className="font-semibold text-white">{currentUser?.name || "Alex Carter"}</p>
+                  <p className="text-[10px] text-slate-400 font-mono">{currentUser?.clearanceLevel || "Tier-3 Clearance"}</p>
                   <div className="flex items-center gap-1.5 mt-1 text-[10px] text-emerald-400">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>Active Session</span>
+                    <span>Active Session • {currentUser?.badgeNumber || 'FCU-TX-8821'}</span>
                   </div>
                 </div>
+
                 <div className="space-y-0.5 mt-1">
+                  <button
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      if (onOpenProfile) onOpenProfile();
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-[#141C2E] text-slate-300 hover:text-white transition-colors text-left"
+                  >
+                    <User className="w-3.5 h-3.5 text-[#38BDF8]" />
+                    <span>Analyst Dossier & Keys</span>
+                  </button>
+
                   <button
                     onClick={() => {
                       setIsProfileOpen(false);
                       if (onNavigateView) onNavigateView('settings');
                     }}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-[#141C2E] text-slate-300 hover:text-white transition-colors text-left"
+                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-[#141C2E] text-slate-300 hover:text-white transition-colors text-left"
                   >
-                    <Settings className="w-3.5 h-3.5" />
-                    <span>Security & Preferences</span>
+                    <Settings className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Terminal Preferences</span>
                   </button>
+
                   <button
                     onClick={() => {
                       setIsProfileOpen(false);
                       if (onNavigateView) onNavigateView('investigate');
                     }}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-[#141C2E] text-slate-300 hover:text-white transition-colors text-left"
+                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-[#141C2E] text-slate-300 hover:text-white transition-colors text-left"
                   >
-                    <ShieldAlert className="w-3.5 h-3.5" />
-                    <span>My Assigned Cases</span>
+                    <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+                    <span>My Assigned Cases ({currentUser?.activeCasesCount || 4})</span>
                   </button>
+
                   <button
-                    onClick={() => setIsProfileOpen(false)}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-rose-950/40 text-rose-400 transition-colors text-left"
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      if (onLockTerminal) onLockTerminal();
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-[#141C2E] text-amber-300 hover:text-amber-200 transition-colors text-left"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Lock Terminal</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      if (onSignOut) onSignOut();
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-rose-950/40 text-rose-400 hover:text-rose-300 transition-colors text-left"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     <span>Shift Handover / Sign Out</span>

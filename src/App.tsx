@@ -9,6 +9,9 @@ import { TopFraudClusters } from './components/analytics/TopFraudClusters';
 import { LiveTransactionStream } from './components/analytics/LiveTransactionStream';
 import { RiskScoreBreakdown } from './components/analytics/RiskScoreBreakdown';
 import { EntityProfileModal } from './components/modals/EntityProfileModal';
+import { UserProfileModal } from './components/modals/UserProfileModal';
+import { LoginScreen } from './components/auth/LoginScreen';
+import { AnalystUser, DEMO_ANALYSTS } from './types/auth';
 
 // Dedicated Full Views
 import { ClustersView } from './components/views/ClustersView';
@@ -35,6 +38,11 @@ import {
 } from './data/fraudDatabase';
 
 export default function App() {
+  // Authentication & Analyst Profile State
+  const [currentUser, setCurrentUser] = useState<AnalystUser | null>(DEMO_ANALYSTS[0]);
+  const [isLocked, setIsLocked] = useState<boolean>(false);
+  const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState<boolean>(false);
+
   // Default to 'graph' or 'overview'
   const [activeView, setActiveView] = useState<NavView>('graph');
   const [selectedEntityId, setSelectedEntityId] = useState<string>('ACC-78291');
@@ -52,17 +60,51 @@ export default function App() {
     setIsProfileModalOpen(true);
   };
 
+  // Full Login Screen if not authenticated
+  if (!currentUser) {
+    return (
+      <LoginScreen
+        onLoginSuccess={(u) => {
+          setCurrentUser(u);
+          setIsLocked(false);
+        }}
+      />
+    );
+  }
+
+  // Fast Biometric / PIN Lock Screen if terminal locked
+  if (isLocked) {
+    return (
+      <LoginScreen
+        lockedUser={currentUser}
+        onUnlock={() => setIsLocked(false)}
+        onSwitchUser={() => {
+          setIsLocked(false);
+          setCurrentUser(null);
+        }}
+        onLoginSuccess={(u) => {
+          setCurrentUser(u);
+          setIsLocked(false);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col min-h-screen w-screen overflow-x-hidden bg-[#060911] text-[#F8FAFC]">
       
       {/* 1. Header Navigation matching screenshot */}
       <Header 
+        currentUser={currentUser}
         onSearchSelect={(q) => {
           setSelectedEntityId(q);
           setActiveView('graph');
         }}
         onNotificationClick={() => setActiveView('alerts')}
         onNavigateView={(v) => setActiveView(v as NavView)}
+        onOpenProfile={() => setIsUserProfileModalOpen(true)}
+        onLockTerminal={() => setIsLocked(true)}
+        onSignOut={() => setCurrentUser(null)}
       />
 
       {/* Main Body: Sidebar + Main Dashboard Stage */}
@@ -339,6 +381,24 @@ export default function App() {
           transactions={INITIAL_TRANSACTIONS}
           onClose={() => setIsProfileModalOpen(false)}
           onRunAiInvestigation={() => {}}
+        />
+      )}
+
+      {/* Full Analyst Identity & Security Credentials Modal */}
+      {currentUser && (
+        <UserProfileModal
+          user={currentUser}
+          isOpen={isUserProfileModalOpen}
+          onClose={() => setIsUserProfileModalOpen(false)}
+          onLockTerminal={() => {
+            setIsUserProfileModalOpen(false);
+            setIsLocked(true);
+          }}
+          onSignOut={() => {
+            setIsUserProfileModalOpen(false);
+            setCurrentUser(null);
+          }}
+          onSwitchUser={(u) => setCurrentUser(u)}
         />
       )}
 
