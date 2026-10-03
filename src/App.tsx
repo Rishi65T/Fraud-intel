@@ -105,6 +105,53 @@ export default function App() {
     setIsProfileModalOpen(true);
   };
 
+  const handleResolveAlert = (alertId: string) => {
+    setLiveAlerts(prev => prev.map(a => a.id === alertId ? { ...a, status: 'Resolved' } : a));
+  };
+
+  const handleAssignAlert = (alertId: string, analyst: string) => {
+    setLiveAlerts(prev => prev.map(a => a.id === alertId ? { ...a, assignedAnalyst: analyst, status: 'Investigating' } : a));
+  };
+
+  const handleUpdateCase = async (id: string, updates: Partial<InvestigationCase>) => {
+    setLiveInvestigations(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+    if (updates.status) {
+      try {
+        await fetch(`/api/investigations/${id}?status=${encodeURIComponent(updates.status)}`, { method: 'PATCH' });
+      } catch (e) {
+        console.warn('Update case status note:', e);
+      }
+    }
+  };
+
+  const handleCreateNewCase = async () => {
+    const newCaseId = `INV-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newCase: InvestigationCase = {
+      id: newCaseId,
+      title: 'Mule Ring Investigation Triage',
+      primaryEntityId: selectedEntityId,
+      riskScore: 0.89,
+      status: 'In Review',
+      priority: 'High',
+      assignedAnalyst: currentUser?.name || 'Alex Carter',
+      createdDate: new Date().toISOString().substring(0, 10),
+      lastUpdated: 'Just now',
+      summary: `Automated case created by ${currentUser?.name || 'Analyst'} for entity ${selectedEntityId}.`,
+      keyFindings: ['Multi-account device linkage flagged in graph topology', 'High transaction velocity in rolling 1-hour window'],
+      evidenceEntities: [selectedEntityId, 'DEV-9921', '45.112.23.12'],
+      timeline: [
+        { time: 'Just now', event: 'Case initiated from investigation workspace', user: currentUser?.name || 'Analyst', type: 'analyst' }
+      ],
+      notes: []
+    };
+    setLiveInvestigations(prev => [newCase, ...prev]);
+    try {
+      await fraudApi.createInvestigation(newCase);
+    } catch (e) {
+      console.warn('Persist new case note:', e);
+    }
+  };
+
   // Full Login Screen if not authenticated
   if (!currentUser) {
     return (
@@ -340,8 +387,8 @@ export default function App() {
                   setSelectedEntityId(id);
                   setIsProfileModalOpen(true);
                 }}
-                onUpdateCase={() => {}}
-                onCreateNewCase={() => {}}
+                onUpdateCase={handleUpdateCase}
+                onCreateNewCase={handleCreateNewCase}
               />
             </div>
           )}
@@ -351,8 +398,8 @@ export default function App() {
               <RiskAlertsView
                 alerts={liveAlerts}
                 onSelectEntity={(id) => setSelectedEntityId(id)}
-                onResolveAlert={() => {}}
-                onAssignAlert={() => {}}
+                onResolveAlert={handleResolveAlert}
+                onAssignAlert={handleAssignAlert}
               />
             </div>
           )}
