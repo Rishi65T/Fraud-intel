@@ -1,0 +1,32 @@
+[
+  {
+    "doc_id": "DOC-001",
+    "title": "UPI Velocity & Phishing Attack Patterns",
+    "category": "Fraud Typology",
+    "content": "UPI velocity attacks occur when a compromised account or stolen device issues rapid outbound transfers to multiple unverified merchant or P2P accounts within minutes. Often associated with Jamtara cyber crime syndicates where phishing victims are tricked into sharing OTPs or approving collect requests."
+  },
+  {
+    "doc_id": "DOC-002",
+    "title": "Shared Device Fingerprint Risk Policy",
+    "category": "Risk Policy",
+    "content": "When a single mobile device hardware fingerprint (e.g. DEV-9921) is bound to 3 or more distinct customer accounts within 24 hours, the device is flagged as a high-risk multi-accounting entity. All transactions initiated from this device hardware ID must undergo mandatory step-up authorization or manual analyst investigation."
+  },
+  {
+    "doc_id": "DOC-003",
+    "title": "Impossible Travel Physical Anomaly",
+    "category": "Detection Rules",
+    "content": "An impossible travel anomaly is triggered when two consecutive card or UPI transactions originate from locations separated by a distance greater than physically traversable in the elapsed time window (e.g., Mumbai to Jamtara in under 30 minutes). Highly indicative of credential theft or proxy relay."
+  },
+  {
+    "doc_id": "DOC-004",
+    "title": "SHAP Feature Attribution Interpretation Guide",
+    "category": "Model Cards",
+    "content": "SHAP (SHapley Additive exPlanations) values decompose a model's prediction score into positive (risk-increasing) and negative (risk-reducing) feature contributions. High positive SHAP values for 'amount_deviation_cust' indicate the transaction amount significantly exceeds the user's historical 90-day spending baseline."
+  },
+  {
+    "doc_id": "DOC-005",
+    "title": "AML Escalation & Freezing Playbook",
+    "category": "Investigation Playbook",
+    "content": "For transactions flagged as CRITICAL (risk score >= 0.80) involving crypto exchanges, high-velocity P2P gateways, or known syndicate nodes, analysts must immediately place a temporary 2-hour lien on the beneficiary account, log evidence in the investigation workspace, and file a Suspicious Transaction Report (STR)."
+  }
+]

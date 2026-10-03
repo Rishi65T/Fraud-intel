@@ -39,14 +39,31 @@ export default function App() {
   const [activeView, setActiveView] = useState<NavView>('graph');
   const [selectedEntityId, setSelectedEntityId] = useState<string>('ACC-78291');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
+  const [showLiveStream, setShowLiveStream] = useState<boolean>(true);
 
   const selectedEntity = INITIAL_ENTITIES[selectedEntityId] || INITIAL_ENTITIES['ACC-78291'];
+
+  const handleSelectEntity = (id: string) => {
+    setSelectedEntityId(id);
+  };
+
+  const handleOpenEntityProfile = (id?: string) => {
+    if (id) setSelectedEntityId(id);
+    setIsProfileModalOpen(true);
+  };
 
   return (
     <div className="flex flex-col min-h-screen w-screen overflow-x-hidden bg-[#060911] text-[#F8FAFC]">
       
       {/* 1. Header Navigation matching screenshot */}
-      <Header onSearchSelect={(q) => setSelectedEntityId('ACC-78291')} />
+      <Header 
+        onSearchSelect={(q) => {
+          setSelectedEntityId(q);
+          setActiveView('graph');
+        }}
+        onNotificationClick={() => setActiveView('alerts')}
+        onNavigateView={(v) => setActiveView(v as NavView)}
+      />
 
       {/* Main Body: Sidebar + Main Dashboard Stage */}
       <div className="flex flex-1 w-full min-w-0">
@@ -77,36 +94,73 @@ export default function App() {
                   </p>
                 </div>
 
-                {/* Right Live Stream Widget */}
-                <div className="w-full sm:w-64 bg-[#0A0E18] border border-[#161E2E] rounded-xl p-3 shadow-sm shrink-0">
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-200 pb-1.5 border-b border-[#161E2E]">
-                    <span className="text-[11px]">Live Stream</span>
-                    <X className="w-3 h-3 text-slate-500 hover:text-white cursor-pointer" />
+                {/* Right Live Stream Widget matching screenshot */}
+                {showLiveStream ? (
+                  <div className="w-full sm:w-64 bg-[#0A0E18] border border-[#161E2E] rounded-xl p-3 shadow-sm shrink-0 transition-all animate-in fade-in select-none">
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-200 pb-1.5 border-b border-[#161E2E]">
+                      <span className="text-[11px]">Live Stream</span>
+                      <button 
+                        type="button"
+                        onClick={() => setShowLiveStream(false)}
+                        className="text-slate-500 hover:text-white transition-colors"
+                        title="Dismiss Live Stream"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <div className="space-y-1.5 mt-2 text-[10px]">
+                      {/* Event 1 */}
+                      <button 
+                        type="button"
+                        onClick={() => handleOpenEntityProfile('TXN-784923')}
+                        className="w-full flex items-center justify-between text-left p-1 rounded hover:bg-[#121929] transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5 text-slate-300">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#F97316] animate-pulse" />
+                          <span className="truncate max-w-[150px]">New high-risk transaction</span>
+                        </div>
+                        <span className="text-slate-500 font-mono">2m ago</span>
+                      </button>
+
+                      {/* Event 2 */}
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setSelectedEntityId('DEV-9921');
+                          setActiveView('graph');
+                        }}
+                        className="w-full flex items-center justify-between text-left p-1 rounded hover:bg-[#121929] transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5 text-slate-300">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
+                          <span className="truncate max-w-[150px]">Suspicious device detected</span>
+                        </div>
+                        <span className="text-slate-500 font-mono">3m ago</span>
+                      </button>
+
+                      {/* Event 3 */}
+                      <button 
+                        type="button"
+                        onClick={() => setActiveView('clusters')}
+                        className="w-full flex items-center justify-between text-left p-1 rounded hover:bg-[#121929] transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5 text-slate-300">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#F97316]" />
+                          <span className="truncate max-w-[150px]">New cluster identified</span>
+                        </div>
+                        <span className="text-slate-500 font-mono">5m ago</span>
+                      </button>
+                    </div>
                   </div>
-                  <div className="space-y-1.5 mt-2 text-[10px]">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-slate-300">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#F97316]" />
-                        <span className="truncate max-w-[150px]">New high-risk transaction</span>
-                      </div>
-                      <span className="text-slate-500 font-mono">2m ago</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-slate-300">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
-                        <span className="truncate max-w-[150px]">Suspicious device detected</span>
-                      </div>
-                      <span className="text-slate-500 font-mono">3m ago</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-slate-300">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#F97316]" />
-                        <span className="truncate max-w-[150px]">New cluster identified</span>
-                      </div>
-                      <span className="text-slate-500 font-mono">5m ago</span>
-                    </div>
-                  </div>
-                </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowLiveStream(true)}
+                    className="text-xs text-[#38BDF8] bg-[#0A0E18] border border-[#161E2E] px-3 py-1.5 rounded-lg hover:bg-[#141C2E] transition-colors self-start"
+                  >
+                    + Restore Live Stream
+                  </button>
+                )}
 
               </div>
 
@@ -139,13 +193,24 @@ export default function App() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
                 <GlobalFraudGlobe />
                 <TransactionRiskTrend />
-                <TopFraudClusters />
+                <TopFraudClusters 
+                  onSelectCluster={(cid) => {
+                    setSelectedEntityId('ACC-78291');
+                    setActiveView('clusters');
+                  }}
+                />
               </div>
 
               {/* Row 4: 2 Tables (Live Transaction Stream + Risk Score Breakdown) */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 w-full">
                 <div className="lg:col-span-8">
-                  <LiveTransactionStream />
+                  <LiveTransactionStream 
+                    onSelectEntity={(accId) => {
+                      setSelectedEntityId(accId);
+                      setIsProfileModalOpen(true);
+                    }}
+                    onOpenProfile={() => setIsProfileModalOpen(true)}
+                  />
                 </div>
                 <div className="lg:col-span-4">
                   <RiskScoreBreakdown />
@@ -170,7 +235,13 @@ export default function App() {
           {/* DEDICATED FULL VIEWS (When navigating to other tabs) */}
           {activeView === 'transactions' && (
             <div className="space-y-4 animate-in fade-in">
-              <LiveTransactionStream />
+              <LiveTransactionStream 
+                onSelectEntity={(accId) => {
+                  setSelectedEntityId(accId);
+                  setIsProfileModalOpen(true);
+                }}
+                onOpenProfile={() => setIsProfileModalOpen(true)}
+              />
             </div>
           )}
 
@@ -178,7 +249,10 @@ export default function App() {
             <div className="animate-in fade-in">
               <InvestigationWorkspaceView
                 cases={INITIAL_INVESTIGATIONS}
-                onSelectEntity={(id) => setSelectedEntityId(id)}
+                onSelectEntity={(id) => {
+                  setSelectedEntityId(id);
+                  setIsProfileModalOpen(true);
+                }}
                 onUpdateCase={() => {}}
                 onCreateNewCase={() => {}}
               />
