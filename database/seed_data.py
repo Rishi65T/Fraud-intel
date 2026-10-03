@@ -4,15 +4,18 @@ import json
 import sqlite3
 import datetime
 import random
-import numpy as np
-import pandas as pd
+import csv
+
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 
 # Set deterministic random seed for reproducibility
 random.seed(42)
-np.random.seed(42)
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'ml', 'data')
 RAW_DIR = os.path.join(DATA_DIR, 'raw')
@@ -22,6 +25,7 @@ DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'database', '
 os.makedirs(RAW_DIR, exist_ok=True)
 os.makedirs(PROCESSED_DIR, exist_ok=True)
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
 
 INDIAN_CITIES = ['Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Jamtara', 'Kolkata', 'Chennai', 'Pune', 'Ahmedabad', 'Jaipur']
 MERCHANTS = [
@@ -79,7 +83,7 @@ def generate_synthetic_fraud_dataset(num_records=5000):
             # Normal transaction
             is_fraud = 0
             merchant = random.choice(MERCHANTS)
-            amount = round(np.random.exponential(scale=2500) + 10, 2)
+            amount = round(random.expovariate(1.0 / 2500.0) + 10, 2)
             device = random.choice(DEVICES)
             city = random.choice([c for c in INDIAN_CITIES if c != 'Jamtara'])
             ip = f"192.168.1.{random.randint(1, 79)}"
@@ -105,25 +109,42 @@ def generate_synthetic_fraud_dataset(num_records=5000):
             'is_fraud': is_fraud
         })
         
-    df = pd.DataFrame(records)
-    
     # Save CSV, Parquet, and SQLite database
     csv_path = os.path.join(RAW_DIR, 'transactions_raw.csv')
     parquet_path = os.path.join(PROCESSED_DIR, 'transactions_processed.parquet')
-    df.to_csv(csv_path, index=False)
-    df.to_parquet(parquet_path, index=False)
     
+    if records:
+        fieldnames = list(records[0].keys())
+        with open(csv_path, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(records)
+
+    if pd is not None:
+        try:
+            df = pd.DataFrame(records)
+            df.to_parquet(parquet_path, index=False)
+        except Exception:
+            pass
+    
+    fraud_count = sum(1 for r in records if r['is_fraud'] == 1)
+    fraud_pct = (fraud_count / len(records)) * 100 if records else 0.0
     print(f"Dataset generated! Raw CSV: {csv_path}, Processed Parquet: {parquet_path}")
-    print(f"Total Transactions: {len(df)}, Fraud Count: {df['is_fraud'].sum()} ({df['is_fraud'].mean()*100:.2f}%)")
+    print(f"Total Transactions: {len(records)}, Fraud Count: {fraud_count} ({fraud_pct:.2f}%)")
     
     # Seed SQLite local fallback DB
-    seed_sqlite_db(df, customers)
-    return df
+    seed_sqlite_db(records, customers)
+    return records
 
-def seed_sqlite_db(df, customers=None):
+def seed_sqlite_db(records, customers=None):
     """Populates local SQLite database for instant server startup without requiring Postgres."""
     if customers is None:
         customers = [f"CUST-{100 + i}" for i in range(200)]
+
+    if hasattr(records, 'to_dict'):
+        record_list = records.to_dict('records')
+    else:
+        record_list = list(records)
 
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -280,7 +301,7 @@ def seed_sqlite_db(df, customers=None):
 
     # Clear and Seed Transactions
     cursor.execute("DELETE FROM transactions")
-    for _, row in df.iterrows():
+    for row in record_list:
         score = 0.88 if row['is_fraud'] == 1 else round(random.uniform(0.01, 0.25), 4)
         level = 'CRITICAL' if score >= 0.85 else ('HIGH' if score >= 0.65 else 'LOW')
         cursor.execute('''
@@ -299,8 +320,8 @@ def seed_sqlite_db(df, customers=None):
 
     # Clear and Seed Alerts for Fraudulent transactions
     cursor.execute("DELETE FROM alerts")
-    fraud_rows = df[df['is_fraud'] == 1].head(30)
-    for i, (_, row) in enumerate(fraud_rows.iterrows()):
+    fraud_rows = [r for r in record_list if r['is_fraud'] == 1][:30]
+    for i, row in enumerate(fraud_rows):
         alert_id = f"ALT-{9000 + i}"
         cursor.execute('''
         INSERT INTO alerts (
@@ -318,7 +339,7 @@ def seed_sqlite_db(df, customers=None):
 
     # Clear and Seed Predictions
     cursor.execute("DELETE FROM predictions")
-    for i, (_, row) in enumerate(fraud_rows.head(10).iterrows()):
+    for row in fraud_rows[:10]:
         cursor.execute('''
         INSERT INTO predictions (
             prediction_id, transaction_id, ml_probability, anomaly_score,
@@ -359,7 +380,7 @@ def seed_sqlite_db(df, customers=None):
     VALUES (?, ?, ?, ?)
     ''', (
         "SYSTEM_SEED", "SYSTEM",
-        json.dumps({"status": "Database Seed Completed", "records": len(df)}),
+        json.dumps({"status": "Database Seed Completed", "records": len(record_list)}),
         now_str
     ))
 
